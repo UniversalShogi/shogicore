@@ -1,0 +1,13 @@
+{
+  "name": "shogicore",
+  "version": "1.0.0",
+  "description": "core library for shogi variants",
+  "keywords": [ "shogi" ],
+  "main": "src/shogicore.js",
+  "repository": "github:UniversalShogi/shogicore",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "KiriniriK",
+  "license": "ISC"
+}
