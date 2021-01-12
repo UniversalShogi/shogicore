@@ -1,4 +1,4 @@
-import Grave from "./Grave";
+import Grave from './Grave';
 
 export default class Player {
     #grave = new Grave();

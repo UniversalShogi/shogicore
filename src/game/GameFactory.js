@@ -2,6 +2,7 @@ import SquareConfig from '../config/SquareConfig';
 import Board from './Board';
 import Game from './Game';
 import Piece from './Piece';
+import RuleSetFactory from './rule/RuleSetFactory';
 import Square from './Square';
 
 export default class GameFactory {
@@ -14,7 +15,8 @@ export default class GameFactory {
                 let square = new Square();
                 if (squareConfig.name !== SquareConfig.BLANK)
                     square.occupy(new Piece(squareConfig.name, squareConfig.owner, gameConfig.piecePool.get(squareConfig.name)));
+                board.setSquareAt(i, j, square);
             }
-        return new Game(board, gameConfig.participantNumber, gameConfig.dropsEnabled);
+        return new Game(board, gameConfig.participantNumber, RuleSetFactory.get(gameConfig.captureRule, gameConfig.dropRule, gameConfig.promotionRule));
     }
 }

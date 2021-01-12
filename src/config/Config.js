@@ -1,5 +1,5 @@
 export default class Config {
     isValid() {
-        return false;
+        return true;
     }
 }
