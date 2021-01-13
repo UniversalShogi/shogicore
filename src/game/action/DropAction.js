@@ -4,8 +4,8 @@ export default class DropAction extends Action {
     #piece;
     #dst;
 
-    constructor(piece, dst) {
-        super();
+    constructor(player, piece, dst) {
+        super(player);
         this.#piece = piece;
         this.#dst = dst;
     }

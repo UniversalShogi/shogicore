@@ -12,11 +12,11 @@ export default class GameFactory {
         for (let i = 0; i < boardConfig.width; i++)
             for (let j = 0; j < boardConfig.height; j++) {
                 let squareConfig = boardConfig.initialSquares[i][j];
-                let square = new Square();
+                let square = new Square(squareConfig.zoneOwner - 1);
                 if (squareConfig.name !== SquareConfig.BLANK)
-                    square.occupy(new Piece(squareConfig.name, squareConfig.owner, gameConfig.piecePool.get(squareConfig.name)));
+                    square.occupy(new Piece(squareConfig.name, squareConfig.owner - 1, gameConfig.piecePool.get(squareConfig.name)));
                 board.setSquareAt(i, j, square);
             }
-        return new Game(board, gameConfig.participantNumber, RuleSetFactory.get(gameConfig.captureRule, gameConfig.dropRule, gameConfig.promotionRule));
+        return new Game(board, gameConfig.participantNumber, RuleSetFactory.get(gameConfig.captureRule, gameConfig.dropRule, gameConfig.promotionRule), gameConfig.piecePool);
     }
 }

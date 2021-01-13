@@ -1,5 +1,5 @@
 export default class CaptureRule {
-    isCapturable(board, capturing, captured, src, dst, previousCaptured, moveCount) {
+    isCapturable(board, moveAction) {
         return false;
     }
 

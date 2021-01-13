@@ -1,12 +1,17 @@
 export default class Piece {
     #name;
     #owner;
-    #movePower;
+    #movePowers;
+    #promotesTo;
+    #promoted;
 
-    constructor(name, owner, movePower) {
+    constructor(name, owner, movePowers, promoted = false, promotesTo = null, originalName = name) {
         this.#name = name;
         this.#owner = owner;
-        this.#movePower = movePower;
+        this.#movePowers = movePowers;
+        this.#promotesTo = promotesTo;
+        this.#promoted = promoted;
+        this.#originalName = name;
     }
 
     getName() {
@@ -17,11 +22,27 @@ export default class Piece {
         return this.#owner;
     }
 
-    getMovePower() {
-        return this.#movePower;
+    getMovePowers() {
+        return this.#movePowers;
     }
 
     betray(newOwner) {
         this.#owner = newOwner;
+    }
+
+    isPromotable() {
+        return this.#promotesTo != null;
+    }
+
+    isPromoted() {
+        return this.#promoted;
+    }
+
+    getPromotedName() {
+        return this.#promotesTo;
+    }
+
+    getOriginalName() {
+        return this.#originalName;
     }
 }

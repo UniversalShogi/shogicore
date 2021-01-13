@@ -1,10 +1,10 @@
 export default class Square {
+    #zoneOwner;
     #occupyingPiece;
-    zoneOwner;
 
-    constructor(occupyingPiece = null, zoneOwner = -1) {
+    constructor(zoneOwner = -1, occupyingPiece = null) {
+        this.#zoneOwner = zoneOwner;
         this.#occupyingPiece = occupyingPiece;
-        this.zoneOwner = zoneOwner;
     }
 
     occupy(piece) {
@@ -24,6 +24,6 @@ export default class Square {
     }
 
     getZoneOwner() {
-        return this.zoneOwner;
+        return this.#zoneOwner;
     }
 }

@@ -1,10 +1,11 @@
 import Config from './Config';
+import MovePowerConfig from './MovePowerConfig';
 
 export default class PieceConfig extends Config {
-    movePower;
+    movePowers;
     promotesTo;
 
     isValid() {
-        return typeof this.movePower === 'string' && typeof this.promotesTo === 'string';
+        return Array.isArray(this.movePowers) && this.movePowers.every(e => e instanceof MovePowerConfig && e.isValid()) && typeof this.promotesTo === 'string';
     }
 }

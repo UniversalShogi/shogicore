@@ -1,5 +1,5 @@
 export default class DropRule {
-    isDroppable(piece, board, dst) {
+    isDroppable(board, dropAction) {
         return false;
     }
 

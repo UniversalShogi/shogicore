@@ -19,6 +19,10 @@ export default class Board {
         return this.#height;
     }
 
+    isInBoard(row, column) {
+        return this.#squares[row]
+    }
+
     getSquareAt(row, column) {
         return this.#squares[row][column];
     }
