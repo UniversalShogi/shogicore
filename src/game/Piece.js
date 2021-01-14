@@ -4,14 +4,17 @@ export default class Piece {
     #movePowers;
     #promotesTo;
     #promoted;
+    #originalName;
+    #isKing;
 
-    constructor(name, owner, movePowers, promoted = false, promotesTo = null, originalName = name) {
+    constructor(name, owner, movePowers, promoted = false, promotesTo = null, originalName = name, isKing = false) {
         this.#name = name;
         this.#owner = owner;
         this.#movePowers = movePowers;
         this.#promotesTo = promotesTo;
         this.#promoted = promoted;
-        this.#originalName = name;
+        this.#originalName = originalName;
+        this.#isKing = isKing;
     }
 
     getName() {
@@ -44,5 +47,9 @@ export default class Piece {
 
     getOriginalName() {
         return this.#originalName;
+    }
+
+    isKing() {
+        return this.#isKing;
     }
 }

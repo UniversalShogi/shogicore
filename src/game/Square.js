@@ -20,7 +20,7 @@ export default class Square {
     }
 
     isOccupied() {
-        return this.#occupyingPiece === null;
+        return this.#occupyingPiece !== null;
     }
 
     getZoneOwner() {

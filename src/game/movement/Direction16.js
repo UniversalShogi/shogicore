@@ -15,5 +15,9 @@ export default {
     WNW: 13,
     NW: 14,
     NNW: 15,
+    STANDARD: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    ROOK: [0, 4, 8, 12],
+    BISHOP: [2, 6, 10, 14],
+    KNIGHT: [1, 3, 5, 7, 9, 11, 13, 15],
     REAL: [ 'NN', 'NNE', 'NENE', 'ENE', 'EE', 'ESE', 'SESE', 'SSE', 'SS', 'SSW', 'SWSW', 'WSW', 'WW', 'WNW', 'NWNW', 'NNW' ]
 }

@@ -1,9 +1,9 @@
-import SquareConfig from '../config/SquareConfig';
-import Board from './Board';
-import Game from './Game';
-import Piece from './Piece';
-import RuleSetFactory from './rule/RuleSetFactory';
-import Square from './Square';
+import SquareConfig from '../config/SquareConfig.js';
+import Board from './Board.js';
+import Game from './Game.js';
+import Piece from './Piece.js';
+import RuleSetFactory from './rule/RuleSetFactory.js';
+import Square from './Square.js';
 
 export default class GameFactory {
     static get(gameConfig) {
@@ -17,6 +17,6 @@ export default class GameFactory {
                     square.occupy(new Piece(squareConfig.name, squareConfig.owner - 1, gameConfig.piecePool.get(squareConfig.name)));
                 board.setSquareAt(i, j, square);
             }
-        return new Game(board, gameConfig.participantNumber, RuleSetFactory.get(gameConfig.captureRule, gameConfig.dropRule, gameConfig.promotionRule), gameConfig.piecePool);
+        return new Game(board, gameConfig.participantNumber, RuleSetFactory.get(gameConfig.captureRules, gameConfig.dropRules, gameConfig.promotionRules), gameConfig.piecePool);
     }
 }

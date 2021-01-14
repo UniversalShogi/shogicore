@@ -1,17 +1,17 @@
-import CaptureRule from '../game/rule/CaptureRule';
-import DropRule from '../game/rule/DropRule';
-import PromotionRule from '../game/rule/PromotionRule';
-import BoardConfig from './BoardConfig';
-import Config from './Config';
-import PieceConfig from './PieceConfig';
+import BoardConfig from './BoardConfig.js';
+import Config from './Config.js';
+import CaptureRuleConfig from './CaptureRuleConfig.js';
+import DropRuleConfig from './DropRuleConfig.js';
+import PieceConfig from './PieceConfig.js';
+import PromotionRuleConfig from './PromotionRuleConfig.js';
 
 export default class GameConfig extends Config {
     piecePool;
     boardConfig;
     participantCount;
-    captureRule;
-    dropRule;
-    promotionRule;
+    captureRules;
+    dropRules;
+    promotionRules;
     // special rules
 
     isValid() {
@@ -20,8 +20,12 @@ export default class GameConfig extends Config {
             && this.boardConfig instanceof BoardConfig && this.boardConfig.isValid()
             && this.boardConfig.initialSquares.every(e => e.every(e1 => this.piecePool.has(e1.name) && e1.owner <= this.participantCount && e1.zoneOwner <= this.participantCount))
             && Number.isInteger(this.participantCount) && this.participantCount > 0
-            && typeof this.captureRule === 'string' && CaptureRule.isValid(this.captureRule)
-            && typeof this.dropRule === 'string' && DropRule.isValid(this.dropRule)
-            && typeof this.promotionRule === 'string' && PromotionRule.isValid(this.promotionRule);
+            && Array.isArray(this.captureRules) && this.captureRules.every(e => e instanceof CaptureRuleConfig && e.isValid()
+                && this.piecePool.has(e.capturing) && this.piecePool.has(e.captured)
+                && e.previousCapturedAllowing.every(e1 => this.piecePool.has(e1))
+                && e.dontImmediatelyRevenge.every(([k, v]) => this.piecePool.has(k) && this.piecePool.has(v)))
+            && Array.isArray(this.dropRules) && this.dropRules.every(e => e instanceof DropRuleConfig && e.isValid()
+                && this.piecePool.has(e.dropping) && this.piecePool.has(e.preventing))
+            && Array.isArray(this.promotionRules) && this.promotionRules.every(e => e instanceof PromotionRuleConfig && e.isValid())
     }
 }

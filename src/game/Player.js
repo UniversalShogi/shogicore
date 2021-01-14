@@ -1,12 +1,15 @@
-import DropAction from './action/DropAction';
-import MoveAction from './action/MoveAction';
-import PromotionAction from './action/PromotionAction';
-import Grave from './Grave';
-import Direction8 from './movement/Direction8';
-import Movement from './movement/Movement';
+import MovePowerConfig from '../config/MovePowerConfig.js';
+import DropAction from './action/DropAction.js';
+import MoveAction from './action/MoveAction.js';
+import PromotionAction from './action/PromotionAction.js';
+import Grave from './Grave.js';
+import Direction8 from './movement/Direction8.js';
+import Movement from './movement/Movement.js';
 
 export default class Player {
     #currentMoveCount = 0;
+    #currentMoving = [null, null];
+    #currentMovingPower = Movement.STEP;
     #currentCaptured = [];
     #previousDirection = Direction8.P;
     #currentPromotionRequest = null;
@@ -33,9 +36,17 @@ export default class Player {
         this.#currentPromotionRequest = promotionAction;
     }
 
-    move(game, piece, src, movement, direction, distance = 0, isLionKing = false) {
-        if (this.hasPromoteRequest())
+    move(game, src, movement, direction, distance = 0, isLionKing = false) {
+        let srcSquare = game.getSquareAt(src[0], src[1]);
+
+        if (this.hasPromoteRequest() || (this.#currentMoveCount > 0 &&
+                (this.#currentMovingPower !== movement || this.#currentMoving.every((e, i) => src[i] === e))) ||
+                !srcSquare.isOccupied()) {
+            this.onInvalidAction(game, this.#currentPromotionRequest);
             return;
+        }
+
+        let movingPiece = srcSquare.getOccupyingPiece();
         
         let isTerminal = this.#currentMoveCount === Movement.LEG(movement);
         let action = new MoveAction(this, src, movement, direction, isTerminal, this.#currentMoveCount, this.#currentCaptured, distance, this.#previousDirection, isLionKing);
@@ -45,14 +56,17 @@ export default class Player {
         } else if (isTerminal) {
             this.#currentMoveCount = 0;
             this.#currentCaptured = [];
+            this.#currentMoving = [null, null];
         } else {
             this.#previousDirection = direction;
             this.#currentMoveCount += 1;
+            this.#currentMoving = action.calculateDestination(movingPiece.getOwner());
+            this.#currentMovingPower = movement;
         }
     }
 
     drop(game, piece, dst) {
-        if (this.hasPromoteRequest())
+        if (this.hasPromoteRequest() || this.#currentMoveCount > 0)
             return;
         
         let action = new DropAction(this, piece, dst);

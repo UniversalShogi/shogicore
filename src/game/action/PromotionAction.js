@@ -1,4 +1,4 @@
-import Action from './Action';
+import Action from './Action.js';
 
 export default class PromotionAction extends Action {
     #src;

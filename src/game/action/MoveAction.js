@@ -1,10 +1,9 @@
-import Direction16 from '../movement/Direction16';
-import Direction8 from '../movement/Direction8';
-import Movement from '../movement/Movement';
-import Action from './Action';
+import Direction16 from '../movement/Direction16.js';
+import Direction8 from '../movement/Direction8.js';
+import Movement from '../movement/Movement.js';
+import Action from './Action.js';
 
 export default class MoveAction extends Action {
-    #piece;
     #src;
     #movement;
     #direction;
@@ -17,7 +16,6 @@ export default class MoveAction extends Action {
 
     constructor(player, src, movement, direction, isTerminal, moveCount, previousCaptured, distance = 1, previousDirection = Direction8.P, isLionKing = false) {
         super(player);
-        this.#piece = piece;
         this.#src = src;
         this.#movement = movement;
         this.#direction = direction;
@@ -27,10 +25,6 @@ export default class MoveAction extends Action {
         this.#previousDirection = previousDirection;
         this.#distance = distance;
         this.#isLionKing = isLionKing;
-    }
-
-    getPiece() {
-        return this.#piece;
     }
 
     getSource() {
@@ -69,33 +63,46 @@ export default class MoveAction extends Action {
         return this.#isLionKing;
     }
 
-    calculateDestination(src) {
+    calculateDirection(owner) {
         let x = 0;
         let y = 0;
 
         function calculateOccurences(str, c) {
-            return (str.match(new RegExp(c, 'g')) || [0]).length;
+            return (str.match(new RegExp(c, 'g')) || []).length;
         }
 
         switch (this.#movement) {
             case Movement.STEP:
             case Movement.RANGE:
             case Movement.LION:
-                x = (this.#direction % 3) - 1;
-                y = (this.#direction / 3 >> 0) - 1
-                if (this.#movement === Movement.RANGE) {
-                    x *= this.#distance;
-                    y *= this.#distance;
-                }  
+                x = (this.#direction / 3 >> 0) - 1;
+                y = (this.#direction % 3) - 1;
+
                 break;
             case Movement.DOUBLE:
-                let real =  Direction16.REAL(direction);
-                x = calculateOccurences(real, 'E') - calculateOccurences(real, 'W');
-                y = calculateOccurences(real, 'N') - calculateOccurences(rela, 'S');
+                let real =  Direction16.REAL[this.#direction];
+                x = calculateOccurences(real, 'S') - calculateOccurences(real, 'N');
+                y = calculateOccurences(real, 'E') - calculateOccurences(real, 'W');
                 break;
             default:
         }
 
-        return [src + x, src + y];
+        if (owner === 1) {
+            x = -x;
+            y = -y;
+        }
+
+        return [x, y];
+    }
+
+    calculateDestination(owner) {
+        let [x, y] = this.calculateDirection(owner);
+
+        if (this.#movement === Movement.RANGE) {
+            x *= this.#distance;
+            y *= this.#distance;
+        }
+
+        return [this.#src[0] + x, this.#src[1] + y];
     }
 }

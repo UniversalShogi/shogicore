@@ -1,9 +1,5 @@
 export default class DropRule {
-    isDroppable(board, dropAction) {
-        return false;
-    }
-
-    static isValid(str) {
+    isDroppable(board, turn, dropAction) {
         return false;
     }
 }

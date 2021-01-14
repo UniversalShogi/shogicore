@@ -6,8 +6,9 @@
   "main": "src/shogicore.js",
   "repository": "github:UniversalShogi/shogicore",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/chushogi/chushogi.js"
   },
   "author": "KiriniriK",
+  "type": "module",
   "license": "ISC"
 }

@@ -1,6 +1,6 @@
-import Direction8 from '../game/movement/Direction8';
-import Movement from '../game/movement/Movement';
-import Config from './Config';
+import Direction8 from '../game/movement/Direction8.js';
+import Movement from '../game/movement/Movement.js';
+import Config from './Config.js';
 
 export default class MovePowerConfig extends Config {
     movement;

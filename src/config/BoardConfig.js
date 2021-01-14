@@ -1,5 +1,5 @@
-import Config from './Config';
-import SquareConfig from './SquareConfig';
+import Config from './Config.js';
+import SquareConfig from './SquareConfig.js';
 
 export default class BoardConfig extends Config {
     width;
