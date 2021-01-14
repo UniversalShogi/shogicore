@@ -1,4 +1,7 @@
 import PieceConfig from '../../src/config/PieceConfig.js';
+import DropAction from '../../src/game/action/DropAction.js';
+import MoveAction from '../../src/game/action/MoveAction.js';
+import PromotionAction from '../../src/game/action/PromotionAction.js';
 import Board from '../../src/game/Board.js';
 import Game from '../../src/game/Game.js';
 import Direction16 from '../../src/game/movement/Direction16.js';
@@ -118,13 +121,6 @@ const SETUP =
 
 let chuBoard = new Board(12, 12);
 
-function printBoard() {
-    console.log(Array(12).fill().map((_, i) => Array(12).fill().map((__, j) => {
-        let square = chuBoard.getSquareAt(i, j);
-        return square.isOccupied() ? square.getOccupyingPiece().getName() : '無';
-    }).join('')).join('\n'))
-}
-
 for (let i = 0; i < 12; i++)
     for (let j = 0; j < 12; j++) {
         let square = new Square(parseInt(ZONE[i][j]) - 1);
@@ -158,7 +154,6 @@ CHU_CAPTURERULE.isCapturable = function(board, turn, moveAction, previousTermina
         srcSquare.vacate();
         let prot = board.isProtectedBy(dst, 1 - turn);
         srcSquare.occupy(capturing);
-        if (prot) console.log('LION CAN\'T CAPTURE A PROTECTED LION');
         return !prot;
     } else
         return previousTerminalCapture === null
@@ -191,11 +186,69 @@ CHU_PROMOTIONRULE.isPromotableOnStuck = function(board, turn, moveAction) {
 }
 
 let chuGame = new Game(chuBoard, 2, new RuleSet(CHU_CAPTURERULE, CHU_DROPRULE, CHU_PROMOTIONRULE), CHU_POOL);
-let sente = new Player();
 
-let gote = new Player();
+function sleep(n) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
+}
+
+function printBoard() {
+    let lastAction = chuGame.getLastAction();
+    let lastPos = chuGame.getLastPos();
+    let from = [-1, -1], to = [-1, -1];
+    let fromColor = '\x1b[0m', toColor = '\x1b[0m';
+
+    if (lastAction === null)
+        return;
+
+    switch (lastAction.constructor) {
+        case MoveAction:
+            from = lastPos[0];
+            fromColor = '\x1b[32m';
+            to = lastPos[1];
+            toColor = '\x1b[33m';
+            break;
+    }
+
+    console.clear();
+    console.log(Array(12).fill().map((_, i) => Array(12).fill().map((__, j) => {
+        let color = '\x1b[0m';
+        let square = chuBoard.getSquareAt(i, j);
+        if (square.isOccupied() && square.getOccupyingPiece().isPromoted())
+            color = '\x1b[31m';
+        
+        if (from[0] === i && from[1] === j)
+            color = fromColor;
+        if (to[0] === i && to[1] === j)
+            color = toColor;
+        return `${color}${square.isOccupied() ? square.getOccupyingPiece().getName() : '無'}\x1b[0m`;
+    }).join('')).join('\n'));
+
+    sleep(1000);
+}
+
+class HookedPlayer extends Player {
+    drop() {
+        super.drop(...arguments);
+        printBoard();
+    }
+
+    move() {
+        super.move(...arguments);
+        printBoard();
+    }
+
+    promote() {
+        super.promote(...arguments);
+        printBoard();
+    }
+}
+
+let sente = new HookedPlayer();
+let gote = new HookedPlayer();
+
 chuGame.addParticipant(sente, 0);
 chuGame.addParticipant(gote, 1);
+
 
 sente.move(chuGame, [9, 5], Movement.DOUBLE, Direction16.N);
 gote.move(chuGame, [2, 6], Movement.DOUBLE, Direction16.N);
@@ -207,5 +260,8 @@ gote.move(chuGame, [4, 6], Movement.DOUBLE, Direction16.N); // LION CANNOT CAPTU
 gote.move(chuGame, [4, 3], Movement.STEP, Direction8.N);
 sente.move(chuGame, [8, 5], Movement.STEP, Direction8.N);
 gote.move(chuGame, [4, 6], Movement.DOUBLE, Direction16.N); // CAPTURABLE, BECAUSE PAWN BLOCKED THE HORSE PROTECTING THE LION
-
-printBoard();
+sente.move(chuGame, [7, 5], Movement.STEP, Direction8.N);
+gote.move(chuGame, [2, 8], Movement.RANGE, Direction8.NE, 5);
+sente.move(chuGame, [6, 5], Movement.STEP, Direction8.N);
+gote.move(chuGame, [7, 3], Movement.RANGE, Direction8.NW, 3);
+gote.promote(chuGame, true); // ACCEPT PROMOTION FROM HORSE TO UNICORN

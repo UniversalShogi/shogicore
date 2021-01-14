@@ -15,6 +15,8 @@ export default class Game {
     #isGenerous;
     #previousTerminalCapture = null;
     #piecePool;
+    #lastPos = [[-1, -1], [-1, -1]];
+    #lastAction = null;
     #turn = 0;
 
     constructor(board, participantCount, ruleset, piecePool) {
@@ -79,6 +81,18 @@ export default class Game {
         return this.getParticipant(this.#turn);
     }
 
+    getTurn() {
+        return this.#turn;
+    }
+
+    getLastPos() {
+        return this.#lastPos;
+    }
+
+    getLastAction() {
+        return this.#lastAction;
+    }
+
     changeTurn() {
         this.#turn = (this.#turn + 1) % this.getParticipantCount();
     }
@@ -87,14 +101,16 @@ export default class Game {
         let player = action.getPlayer();
 
         switch (action.constructor) {
-            case DropAction: {
+            case DropAction: {  
                 let piece = action.getPiece();
                 let dst = action.getDestination();
 
                 if (!this.#board.has(dst[0], dst[1]))
                     return;
                 
-                player.drop(piece);
+                this.#lastAction = action;
+                this.#lastPos = [dst, dst];
+                player.deleteFromHand(piece);
                 this.getSquareAt(dst[0], dst[1]).occupy(piece);
                 break;
             }
@@ -116,6 +132,10 @@ export default class Game {
 
                 if (!this.#board.has(dst[0], dst[1]))
                     return;
+                
+                this.#lastAction = action;
+                if (action.getMoveCount() === 0) this.#lastPos[0] = src;
+                this.#lastPos[1] = dst;
 
                 let dstSquare = this.getSquareAt(dst[0], dst[1]);
 
@@ -148,9 +168,13 @@ export default class Game {
                 if (!srcSquare.isOccupied() || !srcSquare.getOccupyingPiece().isPromotable())
                     return;
                 
-                let promotedName = srcSquare.getOccupyingPiece().getPromotedName();
+                this.#lastAction = action;
+                this.#lastPos = [src, src];
+                
+                let piece = srcSquare.getOccupyingPiece();
+                let promotedName = piece.getPromotedName();
                 let promotedConfig = this.#piecePool.get(promotedName);
-                srcSquare.occupy(new Piece(promotedName, this.getParticipantIndex(player), promotedConfig.movePowers, true, null, srcSquare.getName(), promotedConfig.isKing));
+                srcSquare.occupy(new Piece(promotedName, this.getParticipantIndex(player), promotedConfig.movePowers, true, null, piece.getName(), promotedConfig.isKing));
             }
 
             default:
@@ -253,21 +277,18 @@ export default class Game {
 
                 if (!srcSquare.getOccupyingPiece().isPromotable())
                     promote = PromotionRule.NO;
-                
                 this.godInflict(action);
 
-                if (action.isTerminal())
+                if (action.isTerminal() && (promote & PromotionRule.ABLE) !== PromotionRule.ABLE)
                     this.changeTurn();
                 
                 if (promote === PromotionRule.NO)
                     return true;
-                
-                let promotionAction = new PromotionAction(action.getPlayer(), dst);
 
-                if (promote & PromotionRule.MUST === PromotionRule.MUST)
+                if ((promote & PromotionRule.MUST) === PromotionRule.MUST)
                     this.godInflict(promotionAction);
-                else if (promote & PromotionRule.ABLE === PromotionRule.ABLE)
-                    player.requestPromotion(promotionAction);
+                else if ((promote & PromotionRule.ABLE) === PromotionRule.ABLE)
+                    player.requestPromotion(dst);
                 break;
             }
 
@@ -277,7 +298,9 @@ export default class Game {
                 if (!this.#board.has(src[0], src[1]))
                     return false;
                 
-                this.godInflict(action);
+                if (action.isAccept())
+                    this.godInflict(action);
+                this.changeTurn();
                 break;
             }
 
