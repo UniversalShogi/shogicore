@@ -17,7 +17,7 @@ export default class Player {
 
     capture(piece) {
         this.#grave.addPiece(piece);
-        currentCaptured.push(piece);
+        this.#currentCaptured.push(piece);
     }
 
     hasInHand(piece) {
@@ -40,7 +40,7 @@ export default class Player {
         let srcSquare = game.getSquareAt(src[0], src[1]);
 
         if (this.hasPromoteRequest() || (this.#currentMoveCount > 0 &&
-                (this.#currentMovingPower !== movement || this.#currentMoving.every((e, i) => src[i] === e))) ||
+                (this.#currentMovingPower !== movement || !this.#currentMoving.every((e, i) => src[i] === e))) ||
                 !srcSquare.isOccupied()) {
             this.onInvalidAction(game, this.#currentPromotionRequest);
             return;

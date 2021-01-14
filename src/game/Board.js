@@ -101,6 +101,8 @@ export default class Board {
     }
 
     isProtecting(src, dst) {
+        if (src.every((e, i) => dst[i] === e))
+            return false;
         let srcSquare = this.getSquareAt(src[0], src[1]);
         if (!srcSquare.isOccupied())
             return false;
@@ -173,7 +175,7 @@ export default class Board {
         for (let i = 0; i < this.#height; i++)
             for (let j = 0; j < this.#width; j++) {
                 let srcSquare = this.getSquareAt(i, j);
-                if (srcSquare.isOccupied() && src.getOccupyingPiece().getOwner() === owner
+                if (srcSquare.isOccupied() && srcSquare.getOccupyingPiece().getOwner() === owner
                     && this.isProtecting([i, j], dst))
                     return true;
             }

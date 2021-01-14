@@ -128,7 +128,7 @@ export default class Game {
                     let originalName = dstPiece.getOriginalName();
                     let originalConfig = this.#piecePool.get(originalName);
                     this.#previousTerminalCapture = [this.#turn, src, dst, piece, dstPiece];
-                    player.capture(new Piece(originalName, this.getParticipantIndex(player), originalConfig.movePowers, false, originalConfig.promotesTo, null, originalConfig.isKing));
+                    player.capture(new Piece(originalName, this.getParticipantIndex(player), originalConfig.movePowers, false, originalConfig.promotesTo, originalName, originalConfig.isKing));
                 }
                 
                 this.getSquareAt(dst[0], dst[1]).occupy(piece);
@@ -209,7 +209,7 @@ export default class Game {
                     if (power === Movement.LION && movement === Movement.LION) {
                         if (moveCount === 1 && (direction === Direction8.P || direction === Movement.invert(dir)))
                             return true;
-                        if (dir === Movement.K)
+                        if (dir === Direction8.K)
                             return true;
                     }
 

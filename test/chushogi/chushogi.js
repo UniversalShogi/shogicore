@@ -133,7 +133,7 @@ for (let i = 0; i < 12; i++)
         if (owner !== '0') {
             let name = SETUP[i][j];
             let config = CHU_POOL.get(name);
-            square.occupy(new Piece(name, parseInt(owner) - 1, config.movePowers, false, config.promotesTo, null, config.isKing));
+            square.occupy(new Piece(name, parseInt(owner) - 1, config.movePowers, false, config.promotesTo, name, config.isKing));
         }
 
         chuBoard.setSquareAt(i, j, square);
@@ -147,17 +147,18 @@ CHU_CAPTURERULE.isCapturable = function(board, turn, moveAction, previousTermina
     let capturing = srcSquare.getOccupyingPiece();
     let dst = moveAction.calculateDestination(turn);
     let dstSquare = board.getSquareAt(dst[0], dst[1]);
-    let captured = board.getSquareAt(dstSquare).getOccupyingPiece();
+    let captured = dstSquare.getOccupyingPiece();
     if (captured.getName() !== '獅')
         return true;
 
     if (capturing.getName() === '獅') {
-        if (moveAction.getMoveCount() === 0 || moveAction.getPreviousCaptured().some(e => !['步', '中'].includes(e.getName())))
+        if ((moveAction.getMovement() === Movement.LION && moveAction.getMoveCount() === 0) || moveAction.getPreviousCaptured().some(e => !['步', '中'].includes(e.getName())))
             return true;
         // virtual eat
         srcSquare.vacate();
         let prot = board.isProtectedBy(dst, 1 - turn);
         srcSquare.occupy(capturing);
+        if (prot) console.log('LION CAN\'T CAPTURE A PROTECTED LION');
         return !prot;
     } else
         return previousTerminalCapture === null
@@ -191,10 +192,20 @@ CHU_PROMOTIONRULE.isPromotableOnStuck = function(board, turn, moveAction) {
 
 let chuGame = new Game(chuBoard, 2, new RuleSet(CHU_CAPTURERULE, CHU_DROPRULE, CHU_PROMOTIONRULE), CHU_POOL);
 let sente = new Player();
+
 let gote = new Player();
 chuGame.addParticipant(sente, 0);
 chuGame.addParticipant(gote, 1);
 
 sente.move(chuGame, [9, 5], Movement.DOUBLE, Direction16.N);
+gote.move(chuGame, [2, 6], Movement.DOUBLE, Direction16.N);
+sente.move(chuGame, [8, 4], Movement.STEP, Direction8.N);
+gote.move(chuGame, [3, 7], Movement.STEP, Direction8.N);
+sente.move(chuGame, [7, 5], Movement.LION, Direction8.NE);
+sente.move(chuGame, [6, 6], Movement.LION, Direction8.P);
+gote.move(chuGame, [4, 6], Movement.DOUBLE, Direction16.N); // LION CANNOT CAPTURE PROTECTED LION
+gote.move(chuGame, [4, 3], Movement.STEP, Direction8.N);
+sente.move(chuGame, [8, 5], Movement.STEP, Direction8.N);
+gote.move(chuGame, [4, 6], Movement.DOUBLE, Direction16.N); // CAPTURABLE, BECAUSE PAWN BLOCKED THE HORSE PROTECTING THE LION
 
 printBoard();
