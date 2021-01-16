@@ -15,7 +15,7 @@ export default class GameConfig extends Config {
     // special rules
 
     isValid() {
-        return this.piecePool instanceof Map && [...this.piecePool.entries()].every(([k, v]) => typeof k === 'string' && k != null
+        return this.piecePool instanceof Map && [...this.piecePool.entries()].every(([k, v]) => typeof k === 'string' && k !== ''
             && v instanceof PieceConfig && v.isValid() && (v.promotesTo == null || this.piecePool.has(v.promotesTo)))
             && this.boardConfig instanceof BoardConfig && this.boardConfig.isValid()
             && this.boardConfig.initialSquares.every(e => e.every(e1 => this.piecePool.has(e1.name) && e1.owner <= this.participantCount && e1.zoneOwner <= this.participantCount))

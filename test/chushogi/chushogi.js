@@ -1,7 +1,5 @@
 import PieceConfig from '../../src/config/PieceConfig.js';
-import DropAction from '../../src/game/action/DropAction.js';
 import MoveAction from '../../src/game/action/MoveAction.js';
-import PromotionAction from '../../src/game/action/PromotionAction.js';
 import Board from '../../src/game/Board.js';
 import Game from '../../src/game/Game.js';
 import Direction16 from '../../src/game/movement/Direction16.js';
@@ -9,6 +7,7 @@ import Direction8 from '../../src/game/movement/Direction8.js';
 import Movement from '../../src/game/movement/Movement.js';
 import Piece from '../../src/game/Piece.js';
 import Player from '../../src/game/Player.js';
+import AfterRule from '../../src/game/rule/AfterRule.js';
 import CaptureRule from '../../src/game/rule/CaptureRule.js';
 import DropRule from '../../src/game/rule/DropRule.js';
 import PromotionRule from '../../src/game/rule/PromotionRule.js';
@@ -44,6 +43,10 @@ function LION(arr) {
     return arr.map(e => [Movement.LION, e]);
 }
 
+function LION3(arr) {
+    return arr.map(e => [Movement.LION3, e]);
+}
+ 
 const CHU_POOL = new Map(Object.entries({
     '麒': new PieceConfig(DOUBLE(ROOK16).concat(STEP(BISHOP)), '獅'),
     '獅': new PieceConfig(DOUBLE(STANDARD16).concat(LION([Direction8.K]))),
@@ -137,7 +140,7 @@ for (let i = 0; i < 12; i++)
 
 const CHU_CAPTURERULE = new CaptureRule();
 
-CHU_CAPTURERULE.isCapturable = function(board, turn, moveAction, previousTerminalCapture) {
+CHU_CAPTURERULE.isCapturable = function(board, turn, moveAction, previousTerminalCapture, currentMoveCount, currentCaptured) {
     let src = moveAction.getSource();
     let srcSquare = board.getSquareAt(src[0], src[1]);
     let capturing = srcSquare.getOccupyingPiece();
@@ -148,12 +151,13 @@ CHU_CAPTURERULE.isCapturable = function(board, turn, moveAction, previousTermina
         return true;
 
     if (capturing.getName() === '獅') {
-        if ((moveAction.getMovement() === Movement.LION && moveAction.getMoveCount() === 0) || moveAction.getPreviousCaptured().some(e => !['步', '中'].includes(e.getName())))
+        if ((moveAction.getMovement() === Movement.LION && currentMoveCount === 0) || currentCaptured.some(e => !['步', '中'].includes(e.getName())))
             return true;
         // virtual eat
         srcSquare.vacate();
         let prot = board.isProtectedBy(dst, 1 - turn);
         srcSquare.occupy(capturing);
+        console.log(prot);
         return !prot;
     } else
         return previousTerminalCapture === null
@@ -172,8 +176,16 @@ CHU_PROMOTIONRULE.isPromotableEnteringEnemyZone = function() {
     return PromotionRule.ABLE;
 }
 
-CHU_PROMOTIONRULE.isPromotableFromEnemyZone = function(board, turn, moveAction) {
+CHU_PROMOTIONRULE.isPromotableFromEnemyZone = function(board, turn, moveAction, currentMoveCount, currentCaptured) {
     let dst = moveAction.calculateDestination(turn);
+    let src = moveAction.getSource();
+    let srcSquare = board.getSquareAt(src[0], src[1]);
+    let srcPiece = srcSquare.getOccupyingPiece();
+    if (srcPiece.getName() === '步')
+        if (turn === 0 && dst[0] === 1)
+            return PromotionRule.ABLE;
+        else if (turn === 1 && dst[0] === 10)
+            return PromotionRule.ABLE;
     return (board.getSquareAt(dst[0], dst[1]).isOccupied()) ? PromotionRule.ABLE : PromotionRule.NO;
 }
 
@@ -181,11 +193,9 @@ CHU_PROMOTIONRULE.isPromotableOnCapture = function() {
     return PromotionRule.NO;
 }
 
-CHU_PROMOTIONRULE.isPromotableOnStuck = function(board, turn, moveAction) {
-    return board.getSquareAt(src[0], src[1]).getOccupyingPiece().name === '步' ? PromotionRule.ABLE : PromotionRule.NO;
-}
+const CHU_AFTERMOVERULE = new AfterRule();
 
-let chuGame = new Game(chuBoard, 2, new RuleSet(CHU_CAPTURERULE, CHU_DROPRULE, CHU_PROMOTIONRULE), CHU_POOL);
+let chuGame = new Game(chuBoard, 2, new RuleSet(CHU_CAPTURERULE, CHU_DROPRULE, CHU_PROMOTIONRULE, CHU_AFTERMOVERULE), CHU_POOL);
 
 function sleep(n) {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
@@ -197,24 +207,38 @@ function printBoard() {
     let from = [-1, -1], to = [-1, -1];
     let fromColor = '\x1b[0m', toColor = '\x1b[0m';
 
+    function getOwnerColor(i, j) {
+        let srcSquare = chuGame.getSquareAt(i, j);
+        if (!srcSquare.isOccupied())
+            return '\x1b[0m';
+        else return srcSquare.getOccupyingPiece().getOwner() ? '\x1b[32m' : '\x1b[33m';
+    }
+
+    function getOwnerPromotedColor(i, j) {
+        let srcSquare = chuGame.getSquareAt(i, j);
+        if (!srcSquare.isOccupied())
+            return '\x1b[0m';
+        else return srcSquare.getOccupyingPiece().getOwner() ? '\x1b[31m' : '\x1b[35m';
+    }
+
     if (lastAction === null)
         return;
 
     switch (lastAction.constructor) {
         case MoveAction:
             from = lastPos[0];
-            fromColor = '\x1b[32m';
+            fromColor = '\x1b[34m';
             to = lastPos[1];
-            toColor = '\x1b[33m';
+            toColor = '\x1b[36m';
             break;
     }
 
     console.clear();
     console.log(Array(12).fill().map((_, i) => Array(12).fill().map((__, j) => {
-        let color = '\x1b[0m';
+        let color = getOwnerColor(i, j);
         let square = chuBoard.getSquareAt(i, j);
         if (square.isOccupied() && square.getOccupyingPiece().isPromoted())
-            color = '\x1b[31m';
+            color = getOwnerPromotedColor(i, j);
         
         if (from[0] === i && from[1] === j)
             color = fromColor;
@@ -249,7 +273,34 @@ let gote = new HookedPlayer();
 chuGame.addParticipant(sente, 0);
 chuGame.addParticipant(gote, 1);
 
+function autoMove() {
+    let turn = chuGame.getTurn();
+    let player = chuGame.getTurnParticipant();
+    let available = [];
+    if (chuGame.currentMoveCount() > 0)
+        available.push(...chuGame.getAvailablableMoves(chuGame.getLastAction().calculateDestination(turn)));
+    else
+        for (let i = 0; i < 12; i++)
+            for (let j = 0; j < 12; j++) {
+                let srcSquare = chuGame.getSquareAt(i, j);
+                if (srcSquare.isOccupied() && srcSquare.getOccupyingPiece().getOwner() === turn)
+                    available.push(...chuGame.getAvailablableMoves([i, j]));
+            }
+    if (available.length === 0)
+        console.error('STALEMATE');
+    else {
+        let selected = available[Math.floor(Math.random() * available.length)];
+        player.move(chuGame, selected.getSource(), selected.getMovement(), selected.getDirection(), selected.getDistance());
+    }
 
+    if (player.hasPromotionRequest())
+        player.promote(chuGame, true);
+}
+
+for (let _ of Array(100).fill())
+    autoMove();
+
+/*
 sente.move(chuGame, [9, 5], Movement.DOUBLE, Direction16.N);
 gote.move(chuGame, [2, 6], Movement.DOUBLE, Direction16.N);
 sente.move(chuGame, [8, 4], Movement.STEP, Direction8.N);
@@ -264,4 +315,5 @@ sente.move(chuGame, [7, 5], Movement.STEP, Direction8.N);
 gote.move(chuGame, [2, 8], Movement.RANGE, Direction8.NE, 5);
 sente.move(chuGame, [6, 5], Movement.STEP, Direction8.N);
 gote.move(chuGame, [7, 3], Movement.RANGE, Direction8.NW, 3);
-gote.promote(chuGame, true); // ACCEPT PROMOTION FROM HORSE TO UNICORN
+gote.promote(chuGame, true); // ACCEPT PROMOTION FROM HORSE TO EAGLE
+*/

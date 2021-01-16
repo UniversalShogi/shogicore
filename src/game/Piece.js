@@ -6,8 +6,10 @@ export default class Piece {
     #promoted;
     #originalName;
     #isKing;
+    #generalRank;
+    #noSuicide;
 
-    constructor(name, owner, movePowers, promoted = false, promotesTo = null, originalName = name, isKing = false) {
+    constructor(name, owner, movePowers, promoted = false, promotesTo = null, originalName = name, isKing = false, generalRank = 0, noSuicide = false) {
         this.#name = name;
         this.#owner = owner;
         this.#movePowers = movePowers;
@@ -15,6 +17,8 @@ export default class Piece {
         this.#promoted = promoted;
         this.#originalName = originalName;
         this.#isKing = isKing;
+        this.#generalRank = generalRank;
+        this.#noSuicide = noSuicide;
     }
 
     getName() {
@@ -34,7 +38,7 @@ export default class Piece {
     }
 
     isPromotable() {
-        return this.#promotesTo != null;
+        return Boolean(this.#promotesTo);
     }
 
     isPromoted() {
@@ -45,11 +49,23 @@ export default class Piece {
         return this.#promotesTo;
     }
 
+    setPromotedName(name) {
+        this.#promotesTo = name;
+    }
+
     getOriginalName() {
         return this.#originalName;
     }
 
     isKing() {
         return this.#isKing;
+    }
+
+    getGneralRank() {
+        return this.#generalRank;
+    }
+
+    noSuicide() {
+        return this.#noSuicide;
     }
 }

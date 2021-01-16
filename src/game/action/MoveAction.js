@@ -1,5 +1,4 @@
 import Direction16 from '../movement/Direction16.js';
-import Direction8 from '../movement/Direction8.js';
 import Movement from '../movement/Movement.js';
 import Action from './Action.js';
 
@@ -7,24 +6,14 @@ export default class MoveAction extends Action {
     #src;
     #movement;
     #direction;
-    #isTerminal;
-    #moveCount;
-    #previousCaptured;
-    #previousDirection;
     #distance;
-    #isLionKing;
 
-    constructor(player, src, movement, direction, isTerminal, moveCount, previousCaptured, distance = 1, previousDirection = Direction8.P, isLionKing = false) {
+    constructor(player, src, movement, direction, distance = 1) {
         super(player);
         this.#src = src;
         this.#movement = movement;
         this.#direction = direction;
-        this.#isTerminal = isTerminal;
-        this.#moveCount = moveCount;
-        this.#previousCaptured = previousCaptured;
-        this.#previousDirection = previousDirection;
         this.#distance = distance;
-        this.#isLionKing = isLionKing;
     }
 
     getSource() {
@@ -39,28 +28,8 @@ export default class MoveAction extends Action {
         return this.#direction;
     }
 
-    isTerminal() {
-        return this.#isTerminal;
-    }
-
-    getMoveCount() {
-        return this.#moveCount;
-    }
-
-    getPreviousCaptured() {
-        return this.#previousCaptured;
-    }
-
-    getPreivousDirection() {
-        return this.#previousDirection;
-    }
-
     getDistance() {
         return this.#distance;
-    }
-
-    isLionKing() {
-        return this.#isLionKing;
     }
 
     calculateDirection(owner) {
@@ -75,6 +44,11 @@ export default class MoveAction extends Action {
             case Movement.STEP:
             case Movement.RANGE:
             case Movement.LION:
+            case Movement.SLION:
+            case Movement.LION3:
+            case Movement.SLION3:
+            case Movement.HOOK:
+            case Movement.SHOOK:
                 x = (this.#direction / 3 >> 0) - 1;
                 y = (this.#direction % 3) - 1;
 
@@ -96,9 +70,14 @@ export default class MoveAction extends Action {
     }
 
     calculateDestination(owner) {
+        if (this.#movement === Movement.EMPEROR)
+            return this.#direction.dst;
+        if (this.#movement === Movement.GENERALSTEP)
+            return this.#direction.dst.map((e, i) => e + src[i]);
         let [x, y] = this.calculateDirection(owner);
 
-        if (this.#movement === Movement.RANGE) {
+        if (this.#movement === Movement.RANGE
+            || this.#movement === Movement.HOOK || this.#movement === Movement.SHOOK) {
             x *= this.#distance;
             y *= this.#distance;
         }

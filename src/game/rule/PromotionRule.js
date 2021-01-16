@@ -5,19 +5,19 @@ export default class PromotionRule {
     static ABLE = 0b01;
     static MUST = 0b10;
 
-    isPromotableOnCapture(board, turn, moveAction) {
+    isPromotableOnCapture(board, turn, moveAction, currentMoveCount, currentCaptured) {
         return PromotionRule.NO;
     }
 
-    isPromotableEnteringEnemyZone(board, turn, moveAction) {
+    isPromotableEnteringEnemyZone(board, turn, moveAction, currentMoveCount, currentCaptured) {
         return PromotionRule.NO;
     }
 
-    isPromotableFromEnemyZone(board, turn, moveAction) {
+    isPromotableFromEnemyZone(board, turn, moveAction, currentMoveCount, currentCaptured) {
         return PromotionAction.NO;
     }
 
-    isPromotableOnStuck(board, turn, moveAction) {
-        return PromotionRule.NO;
-    }
+    // isPromotableOnStuck(board, turn, moveAction) {
+    //     return PromotionRule.NO;
+    // }
 }
