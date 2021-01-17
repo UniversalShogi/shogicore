@@ -39,5 +39,13 @@ export default {
 
     S(movement) {
         return movement === 5 || movement === 7 || movement === 10;
+    },
+
+    L(movement) {
+        return movement === 16 || movement === 17;
+    },
+
+    JUMPING(movement) {
+        return movement === 8 || movement === 12 || movement === 13 || movement === 17;
     }
 }

@@ -5,12 +5,16 @@ export default class PieceConfig extends Config {
     movePowers;
     promotesTo;
     isKing;
+    generalRank;
+    noSuicide;
 
-    constructor(movePowers, promotesTo = '', isKing = false) {
+    constructor(movePowers, promotesTo = '', isKing = false, generalRank = -1, noSuicide = false) {
         super();
         this.movePowers = movePowers;
         this.promotesTo = promotesTo;
         this.isKing = isKing;
+        this.generalRank = generalRank;
+        this.noSuicide = noSuicide;
     }
 
     isValid() {

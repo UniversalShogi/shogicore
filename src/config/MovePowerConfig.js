@@ -1,5 +1,7 @@
+import Direction16 from '../game/movement/Direction16.js';
 import Direction8 from '../game/movement/Direction8.js';
 import DirectionE from '../game/movement/DirectionE.js';
+import DirectionL from '../game/movement/DirectionL.js';
 import Movement from '../game/movement/Movement.js';
 import Config from './Config.js';
 
@@ -13,7 +15,10 @@ export default class MovePowerConfig extends Config {
         switch (this.movement) {
             case Movement.STEP:
             case Movement.RANGE:
-            case Movement.GENERAL:
+            case Movement.CJUMP:
+            case Movement.JUMP:
+            case Movement.IGUI:
+            case Movement.PENETRATE:
                 if (Direction8.SPECIAL(this.movement))
                     return false;
             case Movement.LION:
@@ -29,6 +34,10 @@ export default class MovePowerConfig extends Config {
             case Movement.GENERALSTEP:
             case Movement.EMPEROR:
                 return this.direction instanceof DirectionE;
+            case Movement.LRANGE:
+            case Movement.LJUMP:
+                return this.direction instanceof DirectionL && Object.values(Direction8).includes(this.direction.direction)
+                    && this.direction.from <= this.direction.to;
             default:
                 return false;
         }

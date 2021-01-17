@@ -19,6 +19,10 @@ export default class Player {
         this.#grave.removePiece(piece);
     }
 
+    getGrave() {
+        return this.#grave;
+    }
+
     hasPromotionRequest() {
         return this.#currentPromotionRequest !== null;
     }

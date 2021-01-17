@@ -102,6 +102,24 @@ export default class Game {
         this.#currentCaptured = [];
     }
 
+    getAvailableDrops(owner) {
+        let player = this.getParticipant(owner);
+        let grave = player.getGrave();
+        let pieceCount = grave.getPieceCount();
+        let drops = [];
+
+        for (let i = 0; i < pieceCount; i++)
+            for (let j = 0; j < this.#board.getHeight(); j++)
+                for (let k = 0; k < this.#board.getWidth(); k++)
+                    if (!this.getSquareAt(j, k).isOccupied()) {
+            let drop = new DropAction(player, grave.getPiece(i), [j, k]);
+            if (this.#ruleset.getDropRule().isDroppable(this.#board, owner, drop))
+                drops.push(drop);
+        }
+
+        return drops;
+    }
+
     getAvailablableMoves(src) {
         let srcSquare = this.getSquareAt(src[0], src[1]);
         if (!srcSquare.isOccupied())
@@ -109,7 +127,6 @@ export default class Game {
         let available = [];
         let srcPiece = srcSquare.getOccupyingPiece();
         let owner = srcPiece.getOwner();
-        let dirset = [];
         if (this.currentMoveCount() > 0) {
             let power = this.#currentMoves[this.#currentMoves.length - 1].getMovement();
             let currDir = this.#currentMoves[this.#currentMoves.length - 1].getDirection();
@@ -136,7 +153,8 @@ export default class Game {
                         let dstSquare = this.getSquareAt(dst[0], dst[1]);
 
                         if (dstSquare.isOccupied()) {
-                            if (dstSquare.getOccupyingPiece().getOwner() !== owner)
+                            if (dstSquare.getOccupyingPiece().getOwner() !== owner && this.#ruleset.getCaptureRule().isCapturable(this.#board, owner, action,
+                                this.#previousTerminalCapture, this.currentMoveCount(), this.#currentCaptured))
                                 available.push(action);
                             break;
                         }
@@ -156,7 +174,18 @@ export default class Game {
         } else {
             for (let [power, _dir] of srcPiece.getMovePowers())
                 for (let dir of ((Movement.LIONLIKE(power) || Movement.HOOKLIKE(power)) && Direction8.SPECIAL(_dir)) ? Direction8.SET(_dir) : [_dir])
-                    if (Movement.RANGING(power)) {
+                    if (power === Movement.EMPEROR) {
+                        for (let i = 0; i < this.#board.getHeight(); i++)
+                            for (let j = 0; j < this.#board.getWidth(); j++) {
+                                let dstSquare = this.getSquareAt(i, j);
+                                if (dstSquare.isOccupied() && dstSquare.getOccupyingPiece().getOwner() === owner)
+                                    continue;
+                                if (!this.#board.isProtectingng([i, j], 1 - owner))
+                                    available.push(new MoveAction(this.getParticipant(owner), src, power, new DirectionE([i, j])));
+                            }
+                    } else if (Movement.JUMPING(power)) {
+                        let leap = power === Movement.LJUMP ? dir.to : Infinity;
+
                         for (let i = 1; i < this.#board.getWidth() || i < this.#board.getHeight(); i++) {
                             let action = new MoveAction(this.getParticipant(owner), src, power, dir, i);
                             let dst = action.calculateDestination(owner);
@@ -165,7 +194,30 @@ export default class Game {
                             let dstSquare = this.getSquareAt(dst[0], dst[1]);
 
                             if (dstSquare.isOccupied()) {
-                                if (dstSquare.getOccupyingPiece().getOwner() !== owner)
+                                if (dstSquare.getOccupyingPiece().getOwner() !== owner && this.#ruleset.getCaptureRule().isCapturable(this.#board, owner, action,
+                                    this.#previousTerminalCapture, this.currentMoveCount(), this.#currentCaptured))
+                                    available.push(action);
+                                if (srcPiece.getGeneralRank() !== -1 && dstSquare.getOccupyingPiece().getGeneralRank() >= srcPiece.getGeneralRank())
+                                    break;
+                                if (leap-- <= 0)
+                                    break;
+                            } else if (power !== Movement.CJUMP)
+                                available.push(action);
+                        }
+                    } else if (Movement.RANGING(power)) {
+                        let from = power === Movement.LRANGE ? dir.from : 1;
+                        let to = power === Movement.LRANGE ? dir.to : Infinity;
+
+                        for (let i = from; (i < this.#board.getWidth() || i < this.#board.getHeight()) && i < to; i++) {
+                            let action = new MoveAction(this.getParticipant(owner), src, power, dir, i);
+                            let dst = action.calculateDestination(owner);
+                            if (!this.#board.has(dst[0], dst[1]))
+                                break;
+                            let dstSquare = this.getSquareAt(dst[0], dst[1]);
+
+                            if (dstSquare.isOccupied()) {
+                                if (dstSquare.getOccupyingPiece().getOwner() !== owner && this.#ruleset.getCaptureRule().isCapturable(this.#board, owner, action,
+                                    this.#previousTerminalCapture, this.currentMoveCount(), this.#currentCaptured))
                                     available.push(action);
                                 break;
                             }
@@ -221,6 +273,7 @@ export default class Game {
 
             case MoveAction: {
                 let src = action.getSource();
+                let movement = action.getMovement();
                 
                 if (!this.#board.has(src[0], src[1]))
                     return;
@@ -244,7 +297,7 @@ export default class Game {
                 let dstSquare = this.getSquareAt(dst[0], dst[1]);
 
                 this.#previousTerminalCapture = null;
-                if (action.getDirection() === Direction8.P || srcSquare === dstSquare)
+                if (srcSquare === dstSquare)
                     return;
                 
                 if (dstSquare.isOccupied()) {
@@ -252,11 +305,32 @@ export default class Game {
                     let originalName = dstPiece.getOriginalName();
                     let originalConfig = this.#piecePool.get(originalName);
                     this.#previousTerminalCapture = [this.#turn, src, dst, piece, dstPiece];
-                    player.capture(new Piece(originalName, this.getParticipantIndex(player), originalConfig.movePowers, false, originalConfig.promotesTo, originalName, originalConfig.isKing));
+                    player.capture(new Piece(originalName, this.getParticipantIndex(player), originalConfig.movePowers, false, originalConfig.promotesTo, originalName,
+                        originalConfig.isKing, originalConfig.generalRank, originalConfig.noSuicide));
                 }
-                
-                this.getSquareAt(dst[0], dst[1]).occupy(piece);
-                srcSquare.vacate();
+
+                if (movement === Movement.PENETRATE) {
+                    let [x, y] = action.calculateDirection(this.#turn);
+                    for (let i = 1; i < action.getDistance() - 1; i++) {
+                        let square = this.getSquareAt(src[0] + x * i, src[1] + y * i);
+                        
+                        if (square.isOccupied()) {
+                            let dstPiece = square.getOccupyingPiece();
+                            let originalName = dstPiece.getOriginalName();
+                            let originalConfig = this.#piecePool.get(originalName);
+                            player.capture(new Piece(originalName, this.getParticipantIndex(player), originalConfig.movePowers, false, originalConfig.promotesTo,
+                                originalName, originalConfig.isKing, originalConfig.generalRank, originalConfig.noSuicide));
+                            square.vacate();        
+                        }
+                    }
+                }
+
+                if (movement === Movement.IGUI) {
+                    this.getSquareAt(dst[0], dst[1]).vacate();
+                } else {
+                    this.getSquareAt(dst[0], dst[1]).occupy(piece);
+                    srcSquare.vacate();
+                }
                 
                 break;
             }
@@ -278,7 +352,7 @@ export default class Game {
                 let piece = srcSquare.getOccupyingPiece();
                 let promotedName = piece.getPromotedName();
                 let promotedConfig = this.#piecePool.get(promotedName);
-                srcSquare.occupy(new Piece(promotedName, this.getParticipantIndex(player), promotedConfig.movePowers, true, '', piece.getName(), promotedConfig.isKing));
+                srcSquare.occupy(new Piece(promotedName, this.getParticipantIndex(player), promotedConfig.movePowers, true, '', piece.getName(), promotedConfig.isKing, promotedConfig.generalRank, promotedConfig.noSuicide));
             }
 
             default:
@@ -294,6 +368,7 @@ export default class Game {
         switch (action.constructor) {
             case DropAction: {
                 let dst = action.getDestination();
+                let piece = action.getPiece();
 
                 if (!this.#board.has(dst[0], dst[1]))
                     return 0;
@@ -362,7 +437,9 @@ export default class Game {
                         if (movement === Movement.EMPEROR)
                             return direction instanceof DirectionE && direction.dst != null && this.#board.has(direction.dst[0], direction.dst[1]);
                         if (movement === Movement.GENERALSTEP)
-                            return direction instanceof DirectionE && direction.dst != null && dir.dst.every((e, i) => e === direction.dst[i]);
+                            return dir.equals(direction);
+                        if (Movement.L(movement))
+                            return dir.equals(direction);
                         if (Movement.LIONLIKE(movement) || Movement.HOOKLIKE(moveCount))
                             if (Direction8.INCLUDES(dir, direction))
                                 return true;
@@ -380,13 +457,69 @@ export default class Game {
 
                 let dstSquare = this.getSquareAt(dst[0], dst[1]);
 
-                if (movement === Movement.RANGE) {
+                if (movement === Movement.CJUMP || movement === Movement.IGUI) {
+                    if (!dstSquare.isOccupied() || dstSquare.getOccupyingPiece().getOwner() === this.#turn)
+                        return 0;
+                }
+
+                if (Movement.RANGING(movement)) {
                     if (action.getDistance() <= 0)
                         return 0;
-                    let [x, y] = action.calculateDirection(this.#turn);
-                    for (let i = 1; i < action.getDistance() - 1; i++)
-                        if (this.getSquareAt(src[0] + x * i, src[1] + y * i).isOccupied())
-                            return 0;
+
+                    switch (movement) {
+                        case Movement.HOOK:
+                        case Movement.SHOOK:
+                        case Movement.RANGE: {
+                            let [x, y] = action.calculateDirection(this.#turn);
+                            for (let i = 1; i < action.getDistance() - 1; i++)
+                                if (this.getSquareAt(src[0] + x * i, src[1] + y * i).isOccupied())
+                                    return 0;
+                            break;
+                        }
+
+                        case Movement.LRANGE: {
+                            if (action.getDistance() < direction.from || action.getDistance() > direction.to)
+                                return 0;
+                            let [x, y] = action.calculateDirection(this.#turn);
+                            for (let i = direction.from; i < action.getDistance() - 1; i++)
+                                if (this.getSquareAt(src[0] + x * i, src[1] + y * i).isOccupied())
+                                    return 0;
+                            break;
+                        }
+
+                        case Movement.LJUMP: {
+                            let leap = direction.to;
+                            let [x, y] = action.calculateDirection(this.#turn);
+                            for (let i = 1; i < action.getDistance() - 1; i++) {
+                                let square = this.getSquareAt(src[0] + x * i, src[1] + y * i);
+                                if (square.isOccupied())
+                                    if (piece.getGeneralRank() !== -1 && square.getOccupyingPiece().getGeneralRank() >= piece.getGeneralRank())
+                                        return 0;
+                                    else if (leap-- <= 0)
+                                        return 0;
+                            }
+
+                            break;
+                        }
+
+                        
+                        case Movement.JUMP:
+                        case Movement.CJUMP:
+                        case Movement.PENETRATE: {
+                            if (piece.getGeneralRank() === -1)
+                                break;
+                            let [x, y] = action.calculateDirection(this.#turn);
+                            for (let i = 1; i < action.getDistance() - 1; i++) {
+                                let square = this.getSquareAt(src[0] + x * i, src[1] + y * i);
+                                if (square.isOccupied() && square.getOccupyingPiece().getGeneralRank() >= piece.getGeneralRank())
+                                    return 0;
+                            }
+
+                            break;
+                        }
+
+                        default:
+                    }
                 }
 
                 let capture = false;
@@ -396,35 +529,55 @@ export default class Game {
                         if (dstSquare.getOccupyingPiece().getOwner() === this.#turn
                             || !this.#ruleset.getCaptureRule().isCapturable(this.#board, this.#turn, action, this.#previousTerminalCapture, this.currentMoveCount(), this.#currentCaptured))
                             return 0;
+                        if (movement === Movement.PENETRATE)
+                            for (let i = 1; i < action.getDistance() - 1; i++) {
+                                let square = this.getSquareAt(src[0] + x * i, src[1] + y * i);
+                                if (square.isOccupied())
+                                    if (!this.#ruleset.getCaptureRule().isCapturable(this.#board, this.#turn,
+                                        action,
+                                        this.#previousTerminalCapture, i, this.#currentCaptured)) {
+                                        this.#currentCaptured = [];
+                                        return 0;
+                                    } else {
+                                        this.#currentCaptured.push(square.getOccupyingPiece());
+                                    }
+                            }
                         capture = true;
                         this.#currentCaptured.push(dstSquare.getOccupyingPiece());
-                        promote |= this.#ruleset.getPromotionRule().isPromotableOnCapture(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
+                        
                     }
 
-                    if (srcSquare.getZoneOwner() !== -1 && srcSquare.getZoneOwner() !== this.#turn)
-                        promote |= this.#ruleset.getPromotionRule().isPromotableFromEnemyZone(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
-
-                    if (dstSquare.getZoneOwner() !== -1 && dstSquare.getZoneOwner() !== this.#turn)
-                        promote |= this.#ruleset.getPromotionRule().isPromotableEnteringEnemyZone(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
-                    
                     // if (this.#board.isStuck(src))
                     //     promote |= this.#ruleset.getPromotionRule().isPromotableOnStuck(this.#board, this.#turn, action);
                 }
 
-                if (!srcSquare.getOccupyingPiece().isPromotable())
-                    promote = PromotionRule.NO;
-                
-                this.godInflict(action);
-                this.#ruleset.getAfterRule().onAfterMove(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
-                if (this.#board.royalElliminated(1 - this.#turn)) // ASSUMING TWO PLAYERS
-                    this.#ruleset.getAfterRule().onRoyalElliminated(this.#board, this.#turn, action, 1 - this.#turn, this.currentMoveCount(), this.#currentCaptured);
+                let isTerminal = moveCount === Movement.LEG(movement) || (capture && Movement.S(movement));
 
-                if (!dstSquare.isOccupied())
-                    promote = PromotionRule.NO;
-                let isTerminal = moveCount === Movement.LEG(movement) || (capture && Movement.S(movement)) || !dstSquare.isOccupied();
+                if (isTerminal && srcSquare.getOccupyingPiece().isPromotable()) {
+                    let initLoc = this.currentMoveCount() > 0 ? this.#currentMoves[0].getSource() : src;
+                    let initSquare = this.getSquareAt(initLoc[0], initLoc[1]);
+                    if (initSquare.getZoneOwner() !== -1 && initSquare.getZoneOwner() !== this.#turn)
+                        promote |= this.#ruleset.getPromotionRule().isPromotableFromEnemyZone(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
+                    if (dstSquare.getZoneOwner() !== -1 && initSquare.getZoneOwner() !== dstSquare.getZoneOwner() && dstSquare.getZoneOwner() !== this.#turn
+                        && movement !== Movement.IGUI)
+                        promote |= this.#ruleset.getPromotionRule().isPromotableEnteringEnemyZone(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
+                    if (this.#currentCaptured.length > 0)
+                        promote |= this.#ruleset.getPromotionRule().isPromotableOnCapture(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
+                }
+
+                this.godInflict(action);
 
                 if (!isTerminal)
                     this.#currentMoves.push(action);
+
+                if (isTerminal)
+                    this.#ruleset.getAfterRule().onAfterMove(this.#board, this.#turn, action, this.currentMoveCount(), this.#currentCaptured);
+                
+                if (!(movement === Movement.IGUI ? srcSquare : dstSquare).isOccupied())
+                    promote = PromotionRule.NO;
+                
+                if (this.#board.royalElliminated(1 - this.#turn)) // ASSUMING TWO PLAYERS
+                    this.#ruleset.getAfterRule().onRoyalElliminated(this.#board, this.#turn, action, 1 - this.#turn, this.currentMoveCount(), this.#currentCaptured);
 
                 if (isTerminal && (promote & PromotionRule.ABLE) !== PromotionRule.ABLE)
                     this.changeTurn();
@@ -433,7 +586,7 @@ export default class Game {
                     return isTerminal ? 2 : 1;
 
                 if ((promote & PromotionRule.MUST) === PromotionRule.MUST)
-                    this.godInflict(promotionAction);
+                    this.godInflict(new PromotionAction(player, dst, true));
                 else if ((promote & PromotionRule.ABLE) === PromotionRule.ABLE)
                     player.requestPromotion(dst);
                 return isTerminal ? 2 : 1;

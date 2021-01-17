@@ -6,7 +6,9 @@
   "main": "src/shogicore.js",
   "repository": "github:UniversalShogi/shogicore",
   "scripts": {
-    "test": "node test/chushogi/chushogi.js"
+    "chu": "node test/chushogi.js",
+    "tenjiku": "node test/tenjikushogi.js",
+    "hon": "node test/honshogi.js"
   },
   "author": "KiriniriK",
   "type": "module",

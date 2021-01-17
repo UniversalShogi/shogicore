@@ -1,18 +1,18 @@
-import PieceConfig from '../../src/config/PieceConfig.js';
-import MoveAction from '../../src/game/action/MoveAction.js';
-import Board from '../../src/game/Board.js';
-import Game from '../../src/game/Game.js';
-import Direction16 from '../../src/game/movement/Direction16.js';
-import Direction8 from '../../src/game/movement/Direction8.js';
-import Movement from '../../src/game/movement/Movement.js';
-import Piece from '../../src/game/Piece.js';
-import Player from '../../src/game/Player.js';
-import AfterRule from '../../src/game/rule/AfterRule.js';
-import CaptureRule from '../../src/game/rule/CaptureRule.js';
-import DropRule from '../../src/game/rule/DropRule.js';
-import PromotionRule from '../../src/game/rule/PromotionRule.js';
-import RuleSet from '../../src/game/rule/RuleSet.js';
-import Square from '../../src/game/Square.js';
+import PieceConfig from '../src/config/PieceConfig.js';
+import MoveAction from '../src/game/action/MoveAction.js';
+import Board from '../src/game/Board.js';
+import Game from '../src/game/Game.js';
+import Direction16 from '../src/game/movement/Direction16.js';
+import Direction8 from '../src/game/movement/Direction8.js';
+import Movement from '../src/game/movement/Movement.js';
+import Piece from '../src/game/Piece.js';
+import Player from '../src/game/Player.js';
+import AfterRule from '../src/game/rule/AfterRule.js';
+import CaptureRule from '../src/game/rule/CaptureRule.js';
+import DropRule from '../src/game/rule/DropRule.js';
+import PromotionRule from '../src/game/rule/PromotionRule.js';
+import RuleSet from '../src/game/rule/RuleSet.js';
+import Square from '../src/game/Square.js';
 
 const STANDARD = Direction8.STANDARD;
 const STANDARD16 = Direction16.STANDARD;
@@ -26,6 +26,8 @@ const EW = [Direction8.E, Direction8.W];
 const ROOK16 = Direction16.ROOK;
 const BISHOP = Direction8.BISHOP;
 const BISHOP16 = Direction16.BISHOP;
+
+console.time('random-game');
 
 function STEP(arr) {
     return arr.map(e => [Movement.STEP, e]);
@@ -182,9 +184,9 @@ CHU_PROMOTIONRULE.isPromotableFromEnemyZone = function(board, turn, moveAction, 
     let srcSquare = board.getSquareAt(src[0], src[1]);
     let srcPiece = srcSquare.getOccupyingPiece();
     if (srcPiece.getName() === '步')
-        if (turn === 0 && dst[0] === 1)
+        if (turn === 0 && dst[0] === 0)
             return PromotionRule.ABLE;
-        else if (turn === 1 && dst[0] === 10)
+        else if (turn === 1 && dst[0] === 11)
             return PromotionRule.ABLE;
     return (board.getSquareAt(dst[0], dst[1]).isOccupied()) ? PromotionRule.ABLE : PromotionRule.NO;
 }
@@ -193,9 +195,9 @@ CHU_PROMOTIONRULE.isPromotableOnCapture = function() {
     return PromotionRule.NO;
 }
 
-const CHU_AFTERMOVERULE = new AfterRule();
+const CHU_AFTERRULE = new AfterRule();
 
-let chuGame = new Game(chuBoard, 2, new RuleSet(CHU_CAPTURERULE, CHU_DROPRULE, CHU_PROMOTIONRULE, CHU_AFTERMOVERULE), CHU_POOL);
+let chuGame = new Game(chuBoard, 2, new RuleSet(CHU_CAPTURERULE, CHU_DROPRULE, CHU_PROMOTIONRULE, CHU_AFTERRULE), CHU_POOL);
 
 function sleep(n) {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
@@ -218,7 +220,7 @@ function printBoard() {
         let srcSquare = chuGame.getSquareAt(i, j);
         if (!srcSquare.isOccupied())
             return '\x1b[0m';
-        else return srcSquare.getOccupyingPiece().getOwner() ? '\x1b[31m' : '\x1b[35m';
+        else return srcSquare.getOccupyingPiece().getOwner() ? '\x1b[31m' : '\x1b[91m';
     }
 
     if (lastAction === null)
@@ -227,9 +229,9 @@ function printBoard() {
     switch (lastAction.constructor) {
         case MoveAction:
             from = lastPos[0];
-            fromColor = '\x1b[34m';
+            fromColor = '\x1b[94m';
             to = lastPos[1];
-            toColor = '\x1b[36m';
+            toColor = '\x1b[34m';
             break;
     }
 
@@ -247,7 +249,7 @@ function printBoard() {
         return `${color}${square.isOccupied() ? square.getOccupyingPiece().getName() : '無'}\x1b[0m`;
     }).join('')).join('\n'));
 
-    sleep(1000);
+    sleep(100);
 }
 
 class HookedPlayer extends Player {
@@ -265,6 +267,11 @@ class HookedPlayer extends Player {
         super.promote(...arguments);
         printBoard();
     }
+
+    onInvalidAction() {
+        console.log('INVALID');
+        sleep(10000);
+    }
 }
 
 let sente = new HookedPlayer();
@@ -272,6 +279,8 @@ let gote = new HookedPlayer();
 
 chuGame.addParticipant(sente, 0);
 chuGame.addParticipant(gote, 1);
+
+let WINNER = -1;
 
 function autoMove() {
     let turn = chuGame.getTurn();
@@ -295,10 +304,20 @@ function autoMove() {
 
     if (player.hasPromotionRequest())
         player.promote(chuGame, true);
+    
+    if (chuGame.getBoard().royalElliminated(0)) {
+        WINNER = 1;
+    } else if (chuGame.getBoard().royalElliminated(1)) {
+        WINNER = 0;
+    }
 }
 
-for (let _ of Array(100).fill())
+do {
     autoMove();
+} while (WINNER == -1);
+
+console.log(`THE WINNER IS ${WINNER ? 'GOTE' : 'SENTE'}`);
+console.timeEnd('random-game');
 
 /*
 sente.move(chuGame, [9, 5], Movement.DOUBLE, Direction16.N);

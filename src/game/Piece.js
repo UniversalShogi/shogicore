@@ -9,7 +9,7 @@ export default class Piece {
     #generalRank;
     #noSuicide;
 
-    constructor(name, owner, movePowers, promoted = false, promotesTo = null, originalName = name, isKing = false, generalRank = 0, noSuicide = false) {
+    constructor(name, owner, movePowers, promoted = false, promotesTo = null, originalName = name, isKing = false, generalRank = -1, noSuicide = false) {
         this.#name = name;
         this.#owner = owner;
         this.#movePowers = movePowers;
@@ -61,7 +61,7 @@ export default class Piece {
         return this.#isKing;
     }
 
-    getGneralRank() {
+    getGeneralRank() {
         return this.#generalRank;
     }
 

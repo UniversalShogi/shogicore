@@ -49,8 +49,19 @@ export default class MoveAction extends Action {
             case Movement.SLION3:
             case Movement.HOOK:
             case Movement.SHOOK:
+            case Movement.CJUMP:
+            case Movement.JUMP:
+            case Movement.IGUI:
+            case Movement.PENETRATE:
                 x = (this.#direction / 3 >> 0) - 1;
                 y = (this.#direction % 3) - 1;
+
+                break;
+
+            case Movement.LRANGE:
+            case Movement.LJUMP:
+                x = (this.#direction.direction / 3 >> 0) - 1;
+                y = (this.#direction.direction % 3) - 1;
 
                 break;
             case Movement.DOUBLE:
@@ -76,8 +87,7 @@ export default class MoveAction extends Action {
             return this.#direction.dst.map((e, i) => e + src[i]);
         let [x, y] = this.calculateDirection(owner);
 
-        if (this.#movement === Movement.RANGE
-            || this.#movement === Movement.HOOK || this.#movement === Movement.SHOOK) {
+        if (Movement.RANGING(this.#movement)) {
             x *= this.#distance;
             y *= this.#distance;
         }

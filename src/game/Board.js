@@ -137,18 +137,73 @@ export default class Board {
             return false;
         }
         
-        for (let [power, direction] of moving.getMovePowers()) {
+        return moving.getMovePowers().some(([power, direction]) => {
             switch (power) {
                 case Movement.STEP:
                 case Movement.DOUBLE:
+                case Movement.IGUI:
                 case Movement.GENERALSTEP:
                     if (new MoveAction(null, src, power, direction)
                         .calculateDestination(owner).every((e, i) => dst[i] === e))
                         return true;
                     break;
-                
                 case Movement.RANGE: {
                     for (let i = 1; i < this.#width || i < this.#height; i++) {
+                        let way = new MoveAction(null, src, power, direction, i).calculateDestination(owner);
+
+                        if (this.has(way[0], way[1]))
+                            if (way.every((e, i) => dst[i] === e))
+                                return true;
+                            else if (this.getSquareAt(way[0], way[1]).isOccupied())
+                                break;
+                    }
+
+                    break;
+                }
+
+                case Movement.LJUMP: {
+                    let leap = direction.to;
+                    for (let i = 1; i < this.#width || i < this.#height; i++) {
+                        let way = new MoveAction(null, src, power, direction, i).calculateDestination(owner);
+                        let waySquare = this.getSquareAt(way[0], way[1]);
+
+                        if (this.has(way[0], way[1]))
+                            if (way.every((e, i) => dst[i] === e))
+                                return true;
+                            else if (waySquare.isOccupied())
+                                if (moving.getGeneralRank() !== -1 && waySquare.getOccupyingPiece().getGeneralRank() >= moving.getGeneralRank())
+                                    break;
+                                else if (leap-- <= 0)
+                                    break;
+                    }
+
+                    break;
+                }
+
+                case Movement.CJUMP:
+                    if (!this.getSquareAt(dst[0], dst[1]).isOccupied())
+                        return false;
+                
+                case Movement.JUMP:
+                case Movement.PENETRATE: {
+                    for (let i = 1; i < this.#width || i < this.#height; i++) {
+                        let way = new MoveAction(null, src, power, direction, i).calculateDestination(owner);
+
+                        if (this.has(way[0], way[1]))
+                            if (way.every((e, i) => dst[i] === e))
+                                return true;
+                            else if (moving.getGeneralRank() !== -1) {
+                                let waySquare = this.getSquareAt(way[0], way[1]);
+                                if (waySquare.isOccupied() && waySquare.getOccupyingPiece().getGeneralRank() >= moving.getGeneralRank())
+                                    break;
+                            }
+                    }
+
+                    break;
+                }
+
+                case Movement.LRANGE: {
+                    for (let i = direction.from; i < direction.to; i++) {
                         let way = new MoveAction(null, src, power, direction, i).calculateDestination(owner);
 
                         if (this.has(way[0], way[1]))
@@ -204,9 +259,10 @@ export default class Board {
                 default:
                     break;
             }
-        }
 
-        return false;
+            return false;
+        });
+        
     }
 
     isProtectedBy(dst, owner) {
@@ -255,7 +311,7 @@ export default class Board {
             for (let j = 0; j < this.#width; j++) {
                 let src = this.getSquareAt(i, j);
                 if (src.isOccupied() && src.getOccupyingPiece().getOwner() === owner && src.getOccupyingPiece().isKing())
-                    return src;
+                    return [i, j];
             }
         return [-1, -1];
     }
