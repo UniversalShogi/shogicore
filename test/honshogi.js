@@ -275,7 +275,7 @@ function printBoard() {
     console.log(`SENTE: ${sente.getGrave().getPieces().map(e => e.getName()).join('')}`);
     console.log(`GOTE: ${gote.getGrave().getPieces().map(e => e.getName()).join('')}`);
 
-    sleep(100);
+    sleep(1000);
 }
 
 let actions = [0, 0];

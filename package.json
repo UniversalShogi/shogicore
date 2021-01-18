@@ -14,7 +14,7 @@
   },
   "author": "KiriniriK",
   "type": "module",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "dateformat": "^4.4.1"
   }
