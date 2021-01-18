@@ -18,7 +18,7 @@ export default class Grave {
         return this.#pieces.length;
     }
 
-    getPiece(index) {
-        return this.#pieces[index];
+    getPieces() {
+        return this.#pieces;
     }
 }

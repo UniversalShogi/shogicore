@@ -104,15 +104,13 @@ export default class Game {
 
     getAvailableDrops(owner) {
         let player = this.getParticipant(owner);
-        let grave = player.getGrave();
-        let pieceCount = grave.getPieceCount();
         let drops = [];
 
-        for (let i = 0; i < pieceCount; i++)
+        for (let piece of player.getGrave().getPieces())
             for (let j = 0; j < this.#board.getHeight(); j++)
                 for (let k = 0; k < this.#board.getWidth(); k++)
                     if (!this.getSquareAt(j, k).isOccupied()) {
-            let drop = new DropAction(player, grave.getPiece(i), [j, k]);
+            let drop = new DropAction(player, piece, [j, k]);
             if (this.#ruleset.getDropRule().isDroppable(this.#board, owner, drop))
                 drops.push(drop);
         }
@@ -144,7 +142,9 @@ export default class Game {
             } else if (Movement.HOOKLIKE(power))
                 dirs = Direction8.SET(_dir).filter(e => e !== currDir && e !== Direction8.invert(currDir)).concat([Direction8.P]);
             for (let dir of dirs)
-                if (Movement.RANGING(power)) {
+                if (dir === Direction8.P)
+                    available.push(new MoveAction(this.getParticipant(owner), src, power, dir, 0))
+                else if (Movement.RANGING(power)) {
                     for (let i = 1; i < this.#board.getWidth() || i < this.#board.getHeight(); i++) {
                         let action = new MoveAction(this.getParticipant(owner), src, power, dir, i);
                         let dst = action.calculateDestination(owner);
@@ -237,12 +237,6 @@ export default class Game {
         }
 
         return available;
-    }
-
-    isCheck(turn) {
-        if (!this.#board.hasUniqueRoyal(turn))
-            return false;
-        return this.#board.isAttacking(this.#board.getFirstRoyalLocation(turn), 1 - turn);
     }
 
     isCheckmate(turn) {

@@ -2,7 +2,9 @@
   "name": "shogicore",
   "version": "1.0.0",
   "description": "core library for shogi variants",
-  "keywords": [ "shogi" ],
+  "keywords": [
+    "shogi"
+  ],
   "main": "src/shogicore.js",
   "repository": "github:UniversalShogi/shogicore",
   "scripts": {
@@ -12,5 +14,8 @@
   },
   "author": "KiriniriK",
   "type": "module",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "dateformat": "^4.4.1"
+  }
 }

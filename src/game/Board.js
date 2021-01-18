@@ -38,22 +38,10 @@ export default class Board {
         function checkLion(way, dir, depth) {
             let tmp, tmpSquare;
 
-            if (dir === Direction8.K) {
-                for (let first of Direction8.STANDARD) {
-                    tmp = new MoveAction(null, way, power, first).calculateDestination(owner);
-                    if (!this.has(tmp[0], tmp[1]))
-                        continue;
-                    tmpSquare = this.getSquareAt(tmp[0], tmp[1]);
-                    if (tmp.every((e, i) => dst[i] === e))
-                        return true;
-                    else if (depth > 0 && (!tmpSquare.isOccupied() || tmpSquare.getOccupyingPiece().getOwner() !== owner))
-                        if (checkLion(tmp, dir, depth - 1))
-                            return true;
-                }
-            } else {
-                tmp = new MoveAction(null, way, power, dir).calculateDestination(owner);
+            for (let first of Direction8.SPECIAL(dir) ? Direction8.SET(dir) : [dir]) {
+                tmp = new MoveAction(null, way, power, first).calculateDestination(owner);
                 if (!this.has(tmp[0], tmp[1]))
-                    return false;
+                    continue;
                 tmpSquare = this.getSquareAt(tmp[0], tmp[1]);
                 if (tmp.every((e, i) => dst[i] === e))
                     return true;
@@ -68,22 +56,10 @@ export default class Board {
         function checkSLion(way, dir, depth) {
             let tmp, tmpSquare;
 
-            if (dir === Direction8.K) {
-                for (let first of Direction8.STANDARD) {
-                    tmp = new MoveAction(null, way, power, first).calculateDestination(owner);
-                    if (!this.has(tmp[0], tmp[1]))
-                        continue;
-                    tmpSquare = this.getSquareAt(tmp[0], tmp[1]);
-                    if (tmp.every((e, i) => dst[i] === e))
-                        return true;
-                    else if (depth > 0 && !tmpSquare.isOccupied())
-                        if (checkSLion(tmp, dir, depth - 1))
-                            return true;
-                }
-            } else {
-                tmp = new MoveAction(null, way, power, dir).calculateDestination(owner);
+            for (let first of Direction8.SPECIAL(dir) ? Direction8.SET(dir) : [dir]) {
+                tmp = new MoveAction(null, way, power, first).calculateDestination(owner);
                 if (!this.has(tmp[0], tmp[1]))
-                    return false;
+                    continue;
                 tmpSquare = this.getSquareAt(tmp[0], tmp[1]);
                 if (tmp.every((e, i) => dst[i] === e))
                     return true;
@@ -91,22 +67,25 @@ export default class Board {
                     if (checkSLion(tmp, dir, depth - 1))
                         return true;
             }
+            
 
             return false;
         }
 
-        function checkHook(way, dir, depth) {
+        function checkHook(way, dir, depth, prevDir) {
             let tmp, tmpSquare;
 
-            for (let first of dir === Direction8.R ? Direction8.ROOK : Direction8.BISHOP) {
+            for (let first of Direction8.SET(dir).filter(e => e !== prevDir && e !== Direction8.invert(prevDir))) {
                 for (let i = 1; i < this.#width || i < this.#height; i++) {
                     tmp = new MoveAction(null, way, power, first, i).calculateDestination(owner);
 
                     if (!this.has(tmp[0], tmp[1]))
                         break;
                     tmpSquare = this.getSquareAt(tmp[0], tmp[1]);
+                    if (tmp.every((e, i) => dst[i] === e))
+                        return true;
                     if (depth > 0 && (!tmpSquare.isOccupied() || tmpSquare.getOccupyingPiece().getOwner() !== owner))
-                        if (checkHook(tmp, dir, depth - 1))
+                        if (checkHook(tmp, dir, depth - 1, first))
                             return true;
                     if (tmpSquare.isOccupied())
                         break;
@@ -116,21 +95,22 @@ export default class Board {
             return false;
         }
 
-        function checkSHook(way, dir, depth) {
+        function checkSHook(way, dir, depth, prevDir) {
             let tmp, tmpSquare;
 
-            for (let first of dir === Direction8.R ? Direction8.ROOK : Direction8.BISHOP) {
+            for (let first of Direction8.SET(dir).filter(e => e !== prevDir && e !== Direction8.invert(prevDir))) {
                 for (let i = 1; i < this.#width || i < this.#height; i++) {
                     tmp = new MoveAction(null, way, power, first, i).calculateDestination(owner);
 
                     if (!this.has(tmp[0], tmp[1]))
                         break;
                     tmpSquare = this.getSquareAt(tmp[0], tmp[1]);
+                    if (tmp.every((e, i) => dst[i] === e))
+                        return true;
                     if (tmpSquare.isOccupied())
                         break;
-                    if (depth > 0 && checkSHook(tmp, dir, depth - 1))
+                    if (depth > 0 && checkSHook(tmp, dir, depth - 1, first))
                         return true;
-                    
                 }
             }
 
@@ -241,13 +221,13 @@ export default class Board {
                 }
 
                 case Movement.HOOK: {
-                    if (checkHook(src, direction, 1))
+                    if (checkHook(src, direction, 1, Direction8.P))
                         return true;
                     break;
                 }
 
                 case Movement.SHOOK: {
-                    if (checkSHook(src, direction, 1))
+                    if (checkSHook(src, direction, 1, Direction8.P))
                         return true;
                     break;
                 }
@@ -318,6 +298,18 @@ export default class Board {
 
     royalElliminated(owner) {
         return this.getRoyalCount(owner) === 0;
+    }
+
+    isCheck(turn) {
+        if (!this.hasUniqueRoyal(turn))
+            return false;
+        return this.isAttacking(this.getFirstRoyalLocation(turn), 1 - turn);
+    }
+
+    isWCheck(turn) {
+        if (!this.hasUniqueRoyal(turn))
+            return false;
+        return this.isProtectedBy(this.getFirstRoyalLocation(turn), 1 - turn);
     }
 
     getSquareAt(row, column) {

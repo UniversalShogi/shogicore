@@ -249,7 +249,7 @@ function printBoard() {
         return `${color}${square.isOccupied() ? square.getOccupyingPiece().getName() : '無'}\x1b[0m`;
     }).join('')).join('\n'));
 
-    sleep(100);
+    sleep(1000);
 }
 
 class HookedPlayer extends Player {
